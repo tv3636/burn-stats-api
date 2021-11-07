@@ -67,6 +67,9 @@ def getStats():
 
 	resultJson = sorted(output, key= lambda i: i['diff'], reverse=True)
 
+	# hacky workaround to keep the app running since it dies after some time with no requests
+	requests.get("https://aqueous-eyrie-64590.herokuapp.com/api/get")
+
 
 sched = BackgroundScheduler(daemon=True)
 sched.add_job(getStats,'interval', minutes=5, next_run_time=datetime.now())
@@ -79,7 +82,6 @@ app.config['CORS_HEADERS'] = 'Content-Type'
 @app.route("/api/get")
 @cross_origin()
 def home():
-    """ Function for test purposes. """
     return {'traits': resultJson, 'burned': burned, 'flames': flames - burned}
 
 if __name__ == "__main__":
