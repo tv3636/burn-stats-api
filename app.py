@@ -5,70 +5,94 @@ from flask_cors import CORS, cross_origin
 from collections import defaultdict
 import requests, csv, json
 
+traits = ['head', 'body', 'prop', 'familiar', 'rune', 'background']
+nullAddress = "0x0000000000000000000000000000000000000000"
+wizardsContractAddress = "0x521f9c7505005cfa19a8e5786a9c3c9c9f5e6f42"
+soulsContractAddress = "0x251b5f14a825c537ff788604ea1b58e49b70726f"
+
 resultJson = []
+burnOrder = {}
 burned = 0
 flames = 1112
 
 def getStats():
 	global resultJson
 	global burned
+	global burnOrder
 
-	pageSize = 50
-	nextPageSize = 50
-	burnedWizards = []
+	try:
+		pageSize = 50
+		nextPageSize = 50
+		burnedWizards = []
+		traitDict = defaultdict(list)
+		originalTraitCounts = defaultdict(lambda: defaultdict(int))
+		newTraitCounts = defaultdict(lambda: defaultdict(int))
 
-	traitDict = defaultdict(list)
-	originalTraitCounts = defaultdict(lambda: defaultdict(int))
-	newTraitCounts = defaultdict(lambda: defaultdict(int))
+		url = "https://api.opensea.io/api/v1/assets?owner=%s&asset_contract_addresses=%s&order_direction=desc&offset=%%s&limit=%d" % (nullAddress, wizardsContractAddress, nextPageSize)
 
-	traits = ['head', 'body', 'prop', 'familiar', 'rune', 'background']
-	nullAddress = "0x0000000000000000000000000000000000000000"
-	wizardsContractAddress = "0x521f9c7505005cfa19a8e5786a9c3c9c9f5e6f42"
-	url = "https://api.opensea.io/api/v1/assets?owner=%s&asset_contract_addresses=%s&order_direction=desc&offset=%%s&limit=%d" % (nullAddress, wizardsContractAddress, nextPageSize)
+		# Pull original traits from Forgotten Runes collection
+		while nextPageSize == pageSize:
+			wizards = requests.request("GET", url % str(len(burnedWizards))).json()['assets']
 
-	while nextPageSize == pageSize:
-		wizards = requests.request("GET", url % str(len(burnedWizards))).json()['assets']
+			for wizard in wizards:
+				burnedWizards.append(wizard['token_id'])
 
-		for wizard in wizards:
-			burnedWizards.append(wizard['token_id'])
+				for trait in wizard['traits']:
+					if trait['trait_type'] != 'Serial':
+						traitDict[trait['trait_type'] + '_' + trait['value']].append(wizard['token_id'])
 
-			for trait in wizard['traits']:
-				if trait['trait_type'] != 'Serial':
-					traitDict[trait['trait_type'] + '_' + trait['value']].append(wizard['token_id'])
+			nextPageSize = len(wizards)
 
-		nextPageSize = len(wizards)
+		burned = len(burnedWizards)
 
-	burned = len(burnedWizards)
-	print(burned)
+		# Pull burn order from Forgotten Souls collection
+		pageSize = 50
+		nextPageSize = 50
 
-	with open('wizards.csv') as csvfile:
-		for wizard in csv.DictReader(csvfile):
-			for trait in traits:
-				originalTraitCounts[trait][wizard[trait]] += 1
+		url = "https://api.opensea.io/api/v1/assets?asset_contract_addresses=%s&order_direction=desc&offset=%%s&limit=%d" % (soulsContractAddress, nextPageSize)
 
-				if wizard['token_id'] not in burnedWizards:
-					newTraitCounts[trait][wizard[trait]] += 1
+		while nextPageSize == pageSize:
+			souls = requests.request("GET", url % str(len(burnOrder))).json()['assets']
+
+			for soul in souls:
+				for trait in soul['traits']:
+					if trait['trait_type'] == 'Burn order':
+						burnOrder[soul['token_id']] = int(trait['value'])
+
+			nextPageSize = len(souls)
+
+		# Get original trait counts from Forgotten Runes csv
+		with open('wizards.csv') as csvfile:
+			for wizard in csv.DictReader(csvfile):
+				for trait in traits:
+					originalTraitCounts[trait][wizard[trait]] += 1
+
+					if wizard['token_id'] not in burnedWizards:
+						newTraitCounts[trait][wizard[trait]] += 1
 
 
-	output = []
+		output = []
 
-	for trait in traits:
-		for value in originalTraitCounts[trait]:
-			output.append({
-				'type': trait,
-				'name': value,
-				'old': originalTraitCounts[trait][value],
-				'new': newTraitCounts[trait][value],
-				'diff': originalTraitCounts[trait][value] - newTraitCounts[trait][value],
-				'wizards': traitDict[trait + '_' + value]
-			})
+		for trait in traits:
+			for value in originalTraitCounts[trait]:
+				output.append({
+					'type': trait,
+					'name': value,
+					'old': originalTraitCounts[trait][value],
+					'new': newTraitCounts[trait][value],
+					'diff': originalTraitCounts[trait][value] - newTraitCounts[trait][value],
+					'wizards': traitDict[trait + '_' + value]
+				})
 
-	print('success')
+		print('success')
 
-	resultJson = sorted(output, key= lambda i: i['diff'], reverse=True)
+		resultJson = sorted(output, key= lambda i: i['diff'], reverse=True)
 
-	# hacky workaround to keep the app running since it dies after some time with no requests
-	requests.get("https://aqueous-eyrie-64590.herokuapp.com/api/get")
+		# hacky workaround to keep the app running since it dies after some time with no requests
+		requests.get("https://aqueous-eyrie-64590.herokuapp.com/api/get")
+
+	except Exception as e:
+		print(e)
 
 
 sched = BackgroundScheduler(daemon=True)
@@ -83,6 +107,11 @@ app.config['CORS_HEADERS'] = 'Content-Type'
 @cross_origin()
 def home():
     return {'traits': resultJson, 'burned': burned, 'flames': flames - burned}
+
+@app.route("/api/getOrder")
+@cross_origin()
+def order():
+    return {'order': [k for k, v in sorted(burnOrder.items(), key=lambda item: item[1])]}
 
 if __name__ == "__main__":
     app.run()
