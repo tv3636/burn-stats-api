@@ -106,12 +106,7 @@ app.config['CORS_HEADERS'] = 'Content-Type'
 @app.route("/api/get")
 @cross_origin()
 def home():
-    return {'traits': resultJson, 'burned': burned, 'flames': flames - burned}
-
-@app.route("/api/getOrder")
-@cross_origin()
-def order():
-    return {'order': [k for k, v in sorted(burnOrder.items(), key=lambda item: item[1])]}
+    return {'traits': resultJson, 'burned': burned, 'flames': flames - burned, 'order': [k for k, v in sorted(burnOrder.items(), key=lambda item: item[1])]}
 
 if __name__ == "__main__":
     app.run()
