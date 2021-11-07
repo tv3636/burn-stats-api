@@ -1,6 +1,7 @@
 from datetime import datetime
 from apscheduler.schedulers.background import BackgroundScheduler
 from flask import Flask
+from flask_cors import CORS, cross_origin
 from collections import defaultdict
 import requests, csv, json
 
@@ -72,8 +73,11 @@ sched.add_job(getStats,'interval', minutes=5, next_run_time=datetime.now())
 sched.start()
 
 app = Flask(__name__)
+cors = CORS(app)
+app.config['CORS_HEADERS'] = 'Content-Type'
 
 @app.route("/api/get")
+@cross_origin()
 def home():
     """ Function for test purposes. """
     return {'traits': resultJson, 'burned': burned, 'flames': flames - burned}
