@@ -67,6 +67,8 @@ def getStats():
 
 			nextPageSize = len(souls)
 
+		print(len(burnOrder))
+
 		# Get original trait counts from Forgotten Runes csv
 		with open('wizards.csv') as csvfile:
 			for wizard in csv.DictReader(csvfile):
