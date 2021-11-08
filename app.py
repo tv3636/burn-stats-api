@@ -114,6 +114,8 @@ app.config['CORS_HEADERS'] = 'Content-Type'
 @app.route("/api/get")
 @cross_origin()
 def home():
+	global burnOrder
+
 	return {
 		'traits': resultJson, 
 		'burned': burned, 
