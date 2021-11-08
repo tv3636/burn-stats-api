@@ -12,6 +12,7 @@ soulsContractAddress = "0x251b5f14a825c537ff788604ea1b58e49b70726f"
 
 resultJson = []
 burnOrder = {}
+soulTraits = {}
 burned = 0
 flames = 1112
 
@@ -19,6 +20,7 @@ def getStats():
 	global resultJson
 	global burned
 	global burnOrder
+	global soulTraits
 
 	try:
 		pageSize = 50
@@ -55,9 +57,13 @@ def getStats():
 			souls = requests.request("GET", url % str(len(burnOrder))).json()['assets']
 
 			for soul in souls:
+				soulTraits[soul['token_id']] = {'name': soul['name'], 'traits': {}}
+
 				for trait in soul['traits']:
 					if trait['trait_type'] == 'Burn order':
 						burnOrder[soul['token_id']] = int(trait['value'])
+					elif trait['trait_type'].lower() == trait['trait_type']:
+						soulTraits[soul['token_id']]['traits'][trait['trait_type']] = trait['value']
 
 			nextPageSize = len(souls)
 
@@ -106,7 +112,13 @@ app.config['CORS_HEADERS'] = 'Content-Type'
 @app.route("/api/get")
 @cross_origin()
 def home():
-    return {'traits': resultJson, 'burned': burned, 'flames': flames - burned, 'order': [k for k, v in sorted(burnOrder.items(), key=lambda item: item[1])]}
+	return {
+		'traits': resultJson, 
+		'burned': burned, 
+		'flames': flames - burned, 
+		'order': [k for k, v in sorted(burnOrder.items(), key=lambda item: item[1], reverse=True)],
+		'souls': soulTraits
+	}
 
 if __name__ == "__main__":
-    app.run()
+	app.run()
