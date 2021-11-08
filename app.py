@@ -92,7 +92,7 @@ def getStats():
 
 		print('success')
 
-		resultJson = sorted(output, key= lambda i: i['diff'], reverse=True)
+		resultJson = sorted(output, key= lambda i: i['name'])
 
 		# hacky workaround to keep the app running since it dies after some time with no requests
 		requests.get("https://aqueous-eyrie-64590.herokuapp.com/api/get")
