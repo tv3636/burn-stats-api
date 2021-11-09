@@ -29,6 +29,7 @@ def getStats():
 		traitDict = defaultdict(list)
 		originalTraitCounts = defaultdict(lambda: defaultdict(int))
 		newTraitCounts = defaultdict(lambda: defaultdict(int))
+		newOrder = {}
 
 		url = "https://api.opensea.io/api/v1/assets?owner=%s&asset_contract_addresses=%s&order_direction=desc&offset=%%s&limit=%d" % (nullAddress, wizardsContractAddress, nextPageSize)
 
@@ -54,20 +55,21 @@ def getStats():
 		url = "https://api.opensea.io/api/v1/assets?asset_contract_addresses=%s&order_direction=desc&offset=%%s&limit=%d" % (soulsContractAddress, nextPageSize)
 
 		while nextPageSize == pageSize:
-			souls = requests.request("GET", url % str(len(burnOrder))).json()['assets']
+			souls = requests.request("GET", url % str(len(newOrder))).json()['assets']
 
 			for soul in souls:
 				soulTraits[soul['token_id']] = {'name': soul['name'], 'traits': {}}
 
 				for trait in soul['traits']:
 					if trait['trait_type'] == 'Burn order':
-						burnOrder[soul['token_id']] = int(trait['value'])
+						newOrder[soul['token_id']] = int(trait['value'])
 					elif trait['trait_type'].lower() == trait['trait_type']:
 						soulTraits[soul['token_id']]['traits'][trait['trait_type']] = trait['value']
 
 			nextPageSize = len(souls)
 
-		print(len(burnOrder))
+		print(len(newOrder))
+		burnOrder = newOrder
 
 		# Get original trait counts from Forgotten Runes csv
 		with open('wizards.csv') as csvfile:
