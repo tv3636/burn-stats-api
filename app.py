@@ -3,10 +3,8 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from flask import Flask
 from flask_cors import CORS, cross_origin
 from collections import defaultdict
-from dotenv import load_dotenv
 import requests, csv, json, os
 
-load_dotenv()
 traits = ['head', 'body', 'prop', 'familiar', 'rune', 'background']
 nullAddress = "0x0000000000000000000000000000000000000000"
 wizardsContractAddress = "0x521f9c7505005cfa19a8e5786a9c3c9c9f5e6f42"
@@ -21,7 +19,7 @@ flames = 1112
 headers = {
 	"Accept": "application/json", 
 	"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.4692.71 Safari/537.36",
-	'X-API-KEY': os.environ.get('OS_API_KEY')
+	'X-API-KEY': os.environ.get('OS_API_KEY', None)
 }
 
 
