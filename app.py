@@ -3,8 +3,10 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from flask import Flask
 from flask_cors import CORS, cross_origin
 from collections import defaultdict
-import requests, csv, json
+from dotenv import load_dotenv
+import requests, csv, json, os
 
+load_dotenv()
 traits = ['head', 'body', 'prop', 'familiar', 'rune', 'background']
 nullAddress = "0x0000000000000000000000000000000000000000"
 wizardsContractAddress = "0x521f9c7505005cfa19a8e5786a9c3c9c9f5e6f42"
@@ -16,11 +18,19 @@ soulTraits = {}
 burned = 0
 flames = 1112
 
+headers = {
+	"Accept": "application/json", 
+	"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.4692.71 Safari/537.36",
+	'X-API-KEY': os.environ.get('OS_API_KEY')
+}
+
+
 def getStats():
 	global resultJson
 	global burned
 	global burnOrder
 	global soulTraits
+	global headers
 
 	try:
 		pageSize = 50
@@ -35,7 +45,7 @@ def getStats():
 
 		# Pull original traits from Forgotten Runes collection
 		while nextPageSize == pageSize:
-			wizards = requests.request("GET", url % str(len(burnedWizards))).json()['assets']
+			wizards = requests.request("GET", url % str(len(burnedWizards)), headers=headers).json()['assets']
 
 			for wizard in wizards:
 				burnedWizards.append(wizard['token_id'])
@@ -55,7 +65,7 @@ def getStats():
 		url = "https://api.opensea.io/api/v1/assets?asset_contract_addresses=%s&order_direction=desc&offset=%%s&limit=%d" % (soulsContractAddress, nextPageSize)
 
 		while nextPageSize == pageSize:
-			souls = requests.request("GET", url % str(len(newOrder))).json()['assets']
+			souls = requests.request("GET", url % str(len(newOrder)), headers=headers).json()['assets']
 
 			for soul in souls:
 				soulTraits[soul['token_id']] = {'name': soul['name'], 'traits': {}}

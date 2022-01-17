@@ -3,3 +3,4 @@ APScheduler
 flask
 flask_cors
 gunicorn
+dotenv
