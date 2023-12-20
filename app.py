@@ -17,11 +17,8 @@ burned = 0
 flames = 1112
 
 headers = {
-	"Accept": "application/json", 
-	"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.4692.71 Safari/537.36",
-	'X-API-KEY': os.environ.get('OS_API_KEY', None)
+	'X-API-KEY': os.environ.get('RESERVOIR_API_KEY', None)
 }
-
 
 def getStats():
 	global resultJson
@@ -39,6 +36,7 @@ def getStats():
 		newTraitCounts = defaultdict(lambda: defaultdict(int))
 		newOrder = {}
 
+		"""
 		url = "https://api.opensea.io/api/v1/assets?owner=%s&asset_contract_addresses=%s&order_direction=desc&offset=%%s&limit=%d" % (nullAddress, wizardsContractAddress, nextPageSize)
 
 		# Pull original traits from Forgotten Runes collection
@@ -78,6 +76,37 @@ def getStats():
 
 		print(len(newOrder))
 		burnOrder = newOrder
+		"""
+
+		# Use Reservoir API instead of OpenSea
+		url = "https://api.reservoir.tools/tokens/v6?contract=%s&sortBy=updatedAt&limit=1000&includeAttributes=true" % (soulsContractAddress)
+
+		souls = requests.get(url, headers=headers).json()
+
+		for soul in souls['tokens']:
+			soulTraits[soul['token']['tokenId']] = {'name': soul['token']['name'], 'traits': {}}
+			for attribute in soul['token']['attributes']:
+				if attribute['key'] == 'Burn order':
+					newOrder[soul['token']['tokenId']] = int(attribute['value'])
+				elif attribute['key'].lower() in traits:
+					soulTraits[soul['token']['tokenId']]['traits'][attribute['key']] = attribute['value']
+
+		burnOrder = newOrder
+
+		tokenIds = list(burnOrder.keys())
+		for i in range(0, len(tokenIds), 50):
+			url = "https://api.reservoir.tools/tokens/v6?includeAttributes=true&limit=50"
+			for tokenId in tokenIds[i:i+50]:
+				url += "&tokens=%s:%s" % (wizardsContractAddress, tokenId)
+
+			wizards = requests.get(url, headers=headers).json()
+
+			for wizard in wizards['tokens']:
+				burnedWizards.append(wizard['token']['tokenId'])
+
+				for attribute in wizard['token']['attributes']:
+					if attribute['key'].lower() in traits:
+						traitDict[attribute['key'] + '_' + attribute['value']].append(wizard['token']['tokenId'])
 
 		# Get original trait counts from Forgotten Runes csv
 		with open('wizards.csv') as csvfile:
