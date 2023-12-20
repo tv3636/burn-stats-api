@@ -94,6 +94,7 @@ def getStats():
 		burnOrder = newOrder
 
 		tokenIds = list(burnOrder.keys())
+		burned = len(tokenIds)
 		for i in range(0, len(tokenIds), 50):
 			url = "https://api.reservoir.tools/tokens/v6?includeAttributes=true&limit=50"
 			for tokenId in tokenIds[i:i+50]:
